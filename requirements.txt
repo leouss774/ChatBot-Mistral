@@ -6,3 +6,7 @@ trafilatura
 chromadb
 pydantic
 python-dotenv
+
+mistralai
+streamlit
+ddgs

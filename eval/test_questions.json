@@ -1,0 +1,32 @@
+[
+  {
+    "id": "q1",
+    "category": "rag_docs",
+    "question": "Comment installer le client Python officiel de Mistral ?"
+  },
+  {
+    "id": "q2",
+    "category": "rag_papier",
+    "question": "Quel est le score MMLU du modèle Mistral 7B selon le papier de référence ?"
+  },
+  {
+    "id": "q3",
+    "category": "github",
+    "question": "Quelle est la dernière release du dépôt mistral-inference sur GitHub ?"
+  },
+  {
+    "id": "q4",
+    "category": "code",
+    "question": "Donne-moi un exemple de code Python pour appeler l'API de chat Mistral."
+  },
+  {
+    "id": "q5",
+    "category": "web_search",
+    "question": "Quelle est la dernière annonce de modèle publiée par Mistral AI ?"
+  },
+  {
+    "id": "q6",
+    "category": "contact",
+    "question": "Comment contacter le support Mistral AI pour un usage entreprise ?"
+  }
+]
