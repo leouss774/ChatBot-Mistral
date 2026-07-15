@@ -1,15 +1,5 @@
 """
 web_search_agent.py — Agent de recherche web
-
-Utilise DuckDuckGo (bibliothèque `ddgs`, gratuite, sans clé API) pour trouver
-des informations récentes que la base documentaire statique (RAG) ne peut pas
-avoir à jour — annonces de modèles, actualités, etc.
-
-Installation :
-    pip install ddgs
-
-Usage :
-    python agents/web_search_agent.py "Quelle est la dernière annonce de modèle Mistral AI ?"
 """
 
 import os
@@ -17,6 +7,7 @@ import sys
 from ddgs import DDGS
 from dotenv import load_dotenv
 from mistralai.client import Mistral
+from agents.lang_utils import language_instruction
 
 load_dotenv()
 
@@ -27,10 +18,6 @@ client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
 
 
 def build_search_query(question: str) -> str:
-    """Ajoute un contexte 'Mistral AI' à la question pour éviter les résultats
-    hors-sujet quand la question seule est trop générique (ex. "nouveautés",
-    "cette semaine" peuvent faire remonter de l'actualité sans rapport,
-    ex. cinéma, météo, etc.)."""
     if "mistral" in question.lower():
         return f"Mistral AI {question}"
     return f"Mistral AI (entreprise IA) {question}"
@@ -59,32 +46,23 @@ def answer_question(question: str) -> dict:
     try:
         results = search_web(query)
     except Exception as e:
-        return {
-            "answer": f"Erreur lors de la recherche web : {e}",
-            "sources": [],
-        }
+        return {"answer": f"Erreur lors de la recherche web : {e}", "sources": []}
 
     if not results:
-        return {
-            "answer": "Aucun résultat de recherche web trouvé pour cette question.",
-            "sources": [],
-        }
+        return {"answer": "Aucun résultat de recherche web trouvé pour cette question.", "sources": []}
 
     context = build_context(results)
 
     prompt = (
         f"Voici des résultats de recherche web récents :\n\n{context}\n\n"
         f"Question : {question}\n\n"
-        "Réponds en français, de façon concise, en te basant sur ces résultats. "
+        "Réponds de façon concise, en te basant sur ces résultats. "
         "Cite le numéro de la source entre crochets après chaque affirmation, ex. [1]. "
         "Si les résultats ne permettent pas de répondre avec certitude, dis-le."
+        + language_instruction(question)
     )
 
-    response = client.chat.complete(
-        model=CHAT_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
+    response = client.chat.complete(model=CHAT_MODEL, messages=[{"role": "user", "content": prompt}])
     sources = [r["url"] for r in results]
 
     return {"answer": response.choices[0].message.content, "sources": sources}
@@ -105,7 +83,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Usage : python agents/web_search_agent.py "ta question ici"')
         sys.exit(1)
-
     q = " ".join(sys.argv[1:])
     result = answer_question(q)
     print_result(q, result)

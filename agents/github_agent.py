@@ -1,13 +1,5 @@
 """
 github_agent.py — Agent GitHub
-
-Interroge l'API GitHub publique en direct (pas besoin d'auth pour les
-endpoints publics en usage modéré) pour répondre à des questions nécessitant
-des informations à jour : dernière release, nombre d'étoiles, description
-du dépôt, etc. Contrairement au RAG, ces données ne sont jamais périmées.
-
-Usage :
-    python agents/github_agent.py "Quelle est la dernière release de mistral-inference ?"
 """
 
 import os
@@ -16,21 +8,20 @@ import sys
 import httpx
 from dotenv import load_dotenv
 from mistralai.client import Mistral
+from agents.lang_utils import language_instruction
 
 load_dotenv()
 
 GITHUB_API_BASE = "https://api.github.com"
 CHAT_MODEL = "mistral-small-latest"
 
-# Dépôts connus du projet (garde en phase avec ce qui est scrapé dans data/raw/github/)
 KNOWN_REPOS = {
     "client-python": "mistralai/client-python",
     "mistral-inference": "mistralai/mistral-inference",
     "cookbook": "mistralai/cookbook",
 }
 
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # optionnel, augmente juste la limite de rate
-
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
 
 
@@ -42,12 +33,10 @@ def _headers():
 
 
 def identify_repo(question: str) -> str | None:
-    """Trouve quel dépôt connu est mentionné dans la question (recherche simple par mot-clé)."""
     question_lower = question.lower()
     for keyword, repo in KNOWN_REPOS.items():
         if keyword.replace("-", " ") in question_lower.replace("-", " ") or keyword in question_lower:
             return repo
-    # repli : cherche un motif "owner/repo" explicite dans la question
     match = re.search(r"[\w.-]+/[\w.-]+", question)
     if match:
         return match.group(0)
@@ -91,15 +80,9 @@ def answer_question(question: str) -> dict:
     try:
         info = fetch_repo_info(repo)
     except httpx.HTTPStatusError as e:
-        return {
-            "answer": f"Impossible de récupérer les informations pour '{repo}' (erreur GitHub : {e.response.status_code}).",
-            "sources": [],
-        }
+        return {"answer": f"Impossible de récupérer les informations pour '{repo}' (erreur GitHub : {e.response.status_code}).", "sources": []}
     except httpx.RequestError as e:
-        return {
-            "answer": f"Erreur réseau en contactant l'API GitHub : {e}",
-            "sources": [],
-        }
+        return {"answer": f"Erreur réseau en contactant l'API GitHub : {e}", "sources": []}
 
     prompt = (
         f"Voici les données à jour récupérées depuis l'API GitHub pour le dépôt {info['full_name']} :\n\n"
@@ -110,18 +93,13 @@ def answer_question(question: str) -> dict:
         f"- Dernière release : {info['latest_release_tag']} (publiée le {info['latest_release_date']})\n"
         f"- Notes de la dernière release : {info['latest_release_notes']}\n\n"
         f"Question de l'utilisateur : {question}\n\n"
-        "Réponds en français, de façon concise, en te basant uniquement sur ces données."
+        "Réponds de façon concise, en te basant uniquement sur ces données."
+        + language_instruction(question)
     )
 
-    response = client.chat.complete(
-        model=CHAT_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    response = client.chat.complete(model=CHAT_MODEL, messages=[{"role": "user", "content": prompt}])
 
-    return {
-        "answer": response.choices[0].message.content,
-        "sources": [info["url"]],
-    }
+    return {"answer": response.choices[0].message.content, "sources": [info["url"]]}
 
 
 def print_result(question: str, result: dict):
@@ -139,7 +117,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Usage : python agents/github_agent.py "ta question ici"')
         sys.exit(1)
-
     q = " ".join(sys.argv[1:])
     result = answer_question(q)
     print_result(q, result)

@@ -3,6 +3,4 @@ __pycache__/
 .env
 .venv/
 venv/
-data/
 .pytest_cache/
-vectorstore/

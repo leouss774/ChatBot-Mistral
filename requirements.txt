@@ -10,3 +10,7 @@ python-dotenv
 mistralai
 streamlit
 ddgs
+
+langdetect
+
+langdetect
