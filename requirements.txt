@@ -6,3 +6,6 @@ trafilatura
 chromadb
 pydantic
 python-dotenv
+arxiv
+ddgs
+tavily-python

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.fetchers import crawl_seed_pages, search_arxiv, search_github_repositories
+from app.fetchers import crawl_seed_pages, search_arxiv, search_github_repositories, utc_now_iso
 from app.source_catalog import ARXIV_SEARCH_QUERIES, DOC_SEEDS, GITHUB_SEARCH_QUERIES
 
 
@@ -27,16 +27,38 @@ def collect_live_chunks(question: str, agent: str | None = None) -> list[dict[st
     selected_agent = agent or detect_agent(question)
 
     if selected_agent == "web_research":
-        chunks: list[dict[str, Any]] = []
-        for query in ARXIV_SEARCH_QUERIES[:2]:
-            chunks.extend(search_arxiv(query))
-        return chunks
+        from app.src.agents.web_research import web_research_node
+        res = web_research_node({"messages": [{"content": question}]})
+        text_content = "\n\n".join(res.get("web_results", []))
+        return [
+            {
+                "id": f"web_research::{hash(question)}",
+                "text": text_content,
+                "source_url": "https://arxiv.org",
+                "title": f"Web Research for: {question}",
+                "section": "Academic and Web Search Results",
+                "source_type": "web_research",
+                "agent": "web_research",
+                "date_ingestion": utc_now_iso(),
+            }
+        ]
 
     if selected_agent == "github":
-        chunks = []
-        for query in GITHUB_SEARCH_QUERIES[:3]:
-            chunks.extend(search_github_repositories(query))
-        return chunks
+        from app.src.agents.github_agent import github_node
+        res = github_node({"messages": [{"content": question}]})
+        text_content = "\n\n".join(res.get("github_results", []))
+        return [
+            {
+                "id": f"github_research::{hash(question)}",
+                "text": text_content,
+                "source_url": "https://github.com/mistralai",
+                "title": f"GitHub Search for: {question}",
+                "section": "MistralAI Repositories Results",
+                "source_type": "github",
+                "agent": "github",
+                "date_ingestion": utc_now_iso(),
+            }
+        ]
 
     if selected_agent == "contacts":
         return crawl_seed_pages(["https://mistral.ai/"], source_type="contact", agent="contacts", max_pages=4)
