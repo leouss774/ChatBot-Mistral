@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.fetchers import crawl_seed_pages, search_arxiv, search_github_repositories
-from app.source_catalog import ARXIV_SEARCH_QUERIES, DOC_SEEDS, GITHUB_SEARCH_QUERIES
+from app.backup.fetchers import crawl_seed_pages, search_arxiv, search_github_repositories
+from app.backup.source_catalog import ARXIV_SEARCH_QUERIES, DOC_SEEDS, GITHUB_SEARCH_QUERIES
 
 
 AGENT_KEYWORDS = {
